@@ -29,24 +29,34 @@ function fakeJira({ mode = 'server', n = 250, withCriticality = true } = {}) {
     const url = new URL(u);
     const ok = body => ({ ok: true, status: 200, json: async () => body });
     if (url.pathname.endsWith('/rest/api/2/field')) return ok(fieldList);
+    // Like Jira: "key in (...)" / "key = X" select those issues, and an unknown key is a 400 error.
+    const jql = url.searchParams.get('jql') || '';
+    let pool = issues;
+    const keyQuery = jql.match(/^key (?:in \(([^)]*)\)|= (\S+))/);
+    if (keyQuery) {
+      const wanted = (keyQuery[1] || keyQuery[2]).split(',').map(s => s.trim());
+      const unknown = wanted.find(k => !issues.some(i => i.key === k));
+      if (unknown) return { ok: false, status: 400, json: async () => ({ errorMessages: [`An issue with key '${unknown}' does not exist for field 'key'.`] }) };
+      pool = issues.filter(i => wanted.includes(i.key));
+    }
     if (url.pathname.endsWith('/rest/api/2/search')) {
       if (mode === 'cloud') return { ok: false, status: 410, json: async () => ({ errorMessages: ['gone'] }) };
       const s = +url.searchParams.get('startAt');
-      return ok({ total: n, issues: issues.slice(s, s + 100) });
+      return ok({ total: pool.length, issues: pool.slice(s, s + 100) });
     }
     if (url.pathname.endsWith('/rest/api/3/search/jql')) {
       const t = +(url.searchParams.get('nextPageToken') || 0);
-      return ok({ issues: issues.slice(t, t + 100), nextPageToken: t + 100 < n ? String(t + 100) : undefined });
+      return ok({ issues: pool.slice(t, t + 100), nextPageToken: t + 100 < pool.length ? String(t + 100) : undefined });
     }
     return { ok: false, status: 404, json: async () => ({}) };
   };
   return { fetch, calls: () => calls };
 }
 
-async function runScript(script, { host = 'acme.atlassian.net', jira }) {
+async function runScript(script, { host = 'acme.atlassian.net', jira, input = 'project = QA' }) {
   let clip = null, downloaded = null; const logs = [];
   const g = {
-    prompt: () => 'project = QA',
+    prompt: () => input,
     location: { origin: 'https://' + host, hostname: host },
     AJS: undefined,
     fetch: jira.fetch,
@@ -140,6 +150,26 @@ async function runScript(script, { host = 'acme.atlassian.net', jira }) {
     const r = await runScript(script, { jira: fakeJira({ withCriticality: false }) });
     assert.equal(r.rows.length, 251);
     assert.ok(r.logs.some(l => l.startsWith('WARN') && l.includes('no field named "Criticality"')));
+  });
+  for (const mode of ['server', 'cloud']) {
+    await test(`${mode}: a pasted list of keys (e.g. from an Xray folder) fetches exactly those tests`, async () => {
+      const keys = Array.from({ length: 150 }, (_, i) => 'QA-' + (i * 2 + 1)); // 150 keys -> 2 batches
+      const r = await runScript(script, { jira: fakeJira({ mode, n: 400 }), input: keys.join('\n') });
+      assert.equal(r.rows.length, 151);
+      assert.deepEqual(r.rows.slice(1).map(row => row[0]), keys);
+      assert.ok(r.logs.some(l => l.includes('150 test keys pasted') && l.includes('2 batch')));
+      assert.ok(r.rows.slice(1).every(row => row[2].length > 0));
+    });
+  }
+  await test('keys that do not exist are skipped and reported, the rest still come through', async () => {
+    const r = await runScript(script, { jira: fakeJira({ n: 50 }), input: 'QA-1, QA-2, QA-999, QA-3' });
+    assert.deepEqual(r.rows.slice(1).map(row => row[0]), ['QA-1', 'QA-2', 'QA-3']);
+    assert.ok(r.logs.some(l => l.startsWith('WARN') && l.includes('QA-999')));
+  });
+  await test('a normal search is not mistaken for a key list', async () => {
+    const r = await runScript(script, { jira: fakeJira({ n: 120 }), input: 'project = QA AND issuetype = Test' });
+    assert.equal(r.rows.length, 121);
+    assert.ok(!r.logs.some(l => l.includes('keys pasted')));
   });
   await test('refuses to run inside the Xray frame, with zero requests', async () => {
     const jira = fakeJira();
