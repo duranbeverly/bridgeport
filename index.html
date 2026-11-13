@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bridgeport</title>
+<meta name="description" content="Get thousands of Jira/Xray test cases into one clean spreadsheet, even from locked-down environments.">
+<style>
+  :root { --bg:#f6f6f3; --card:#fff; --ink:#1c1c1f; --muted:#66666d; --line:#e1e1dc; --accent:#2a59d6; --accent-ink:#fff; --accent-soft:#e8eefc; --warn:#9a5800; --warn-bg:#fff4e2; --err:#b42318; --err-bg:#fdecea; --ok:#1f7a3a; --ok-bg:#e8f6ed; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141416; --card:#1e1e21; --ink:#ececee; --muted:#a2a2aa; --line:#323238; --accent:#7ea4ff; --accent-ink:#0b1020; --accent-soft:#1d2640; --warn:#f0b35a; --warn-bg:#2d2414; --err:#ff8a80; --err-bg:#2e1716; --ok:#6fd38f; --ok-bg:#132619; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 22px 16px 64px; }
+  header.top { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom: 14px; }
+  h1 { font-size: 28px; margin: 0; letter-spacing: -0.015em; }
+  h1 small { font-size: 14px; font-weight: 500; color: var(--muted); margin-left: 8px; letter-spacing: 0; }
+  h2 { font-size: 17px; margin: 0 0 10px; }
+  h3 { font-size: 15px; margin: 16px 0 6px; }
+  p { margin: 0 0 10px; }
+  .sub { color: var(--muted); margin: 6px 0 0; max-width: 760px; }
+  nav.tabs { display:flex; gap:6px; flex-wrap:wrap; margin: 16px 0 18px; border-bottom:1px solid var(--line); }
+  nav.tabs button { background:none; border:none; color:var(--muted); padding:10px 12px; font:inherit; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; border-radius:0; }
+  nav.tabs button[aria-selected="true"] { color:var(--ink); border-bottom-color: var(--accent); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  .step { display:inline-block; width:24px; height:24px; border-radius:50%; background:var(--accent); color:var(--accent-ink); text-align:center; font-weight:700; font-size:13px; line-height:24px; margin-right:8px; }
+  .drop { border: 2px dashed var(--line); border-radius: 10px; padding: 24px; text-align: center; color: var(--muted); cursor: pointer; }
+  .drop.over { border-color: var(--accent); color: var(--ink); background: var(--accent-soft); }
+  button.btn, a.btn { appearance:none; border:1px solid var(--accent); background:var(--accent); color:var(--accent-ink); padding:8px 14px; border-radius:8px; font:inherit; font-weight:600; cursor:pointer; text-decoration:none; display:inline-block; }
+  .btn.ghost { background:transparent; color:var(--accent); }
+  .btn:disabled { opacity:.45; cursor:not-allowed; }
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  label.f { display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--muted); }
+  label.chk { display:flex; gap:8px; align-items:center; font-size:14px; }
+  select, input[type=text], textarea { font:inherit; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:7px 9px; width:100%; }
+  textarea.code { font-family: ui-monospace, Consolas, monospace; font-size: 12px; min-height: 260px; white-space: pre; }
+  .stats { display:grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap:10px; margin: 6px 0 12px; }
+  .stat { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+  .stat b { display:block; font-size:22px; }
+  .stat span { color:var(--muted); font-size:12px; }
+  .msg { border-radius:8px; padding:8px 12px; margin:6px 0; font-size:14px; }
+  .msg.warn { background:var(--warn-bg); color:var(--warn); }
+  .msg.err { background:var(--err-bg); color:var(--err); }
+  .msg.ok { background:var(--ok-bg); color:var(--ok); }
+  .tablewrap { overflow:auto; max-height: 460px; border:1px solid var(--line); border-radius:10px; }
+  table { border-collapse: collapse; width:100%; font-size:13px; }
+  th, td { text-align:left; padding:7px 9px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { position: sticky; top:0; background:var(--card); z-index:1; }
+  td.desc { max-width: 520px; white-space: nowrap; overflow:hidden; text-overflow: ellipsis; }
+  td.mono, th { white-space: nowrap; }
+  code, .mono { font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+  ol.how { margin: 6px 0 0; padding-left: 20px; } ol.how li { margin: 4px 0; }
+  .muted { color: var(--muted); }
+  .hidden { display:none !important; }
+  .files { margin-top:10px; font-size:13px; }
+  .pill { display:inline-block; font-size:12px; font-weight:600; padding:2px 8px; border-radius:999px; background:var(--accent-soft); color:var(--accent); }
+  .cols { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .story p, .story li { max-width: 760px; }
+  .story ul { padding-left: 20px; margin: 4px 0 10px; }
+  .diagram { width:100%; max-width: 920px; height:auto; }
+  .diagram text { fill: var(--ink); font: 13px system-ui, sans-serif; }
+  .diagram .box { fill: var(--card); stroke: var(--line); stroke-width: 1.5; }
+  .diagram .hl { fill: var(--accent-soft); stroke: var(--accent); }
+  .diagram .arrow { stroke: var(--muted); stroke-width: 1.5; fill: none; marker-end: url(#ah); }
+  .diagram .lbl { fill: var(--muted); font-size: 12px; }
+  footer { margin-top: 28px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div>
+      <h1>Bridgeport <small>test case export &amp; migration</small></h1>
+      <p class="sub">Get thousands of Jira / Xray test cases, descriptions included, into one clean spreadsheet. It also works in locked-down environments where you can't install anything. Everything runs in your browser; no data is uploaded.</p>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="convert">Convert</button>
+    <button role="tab" aria-selected="false" data-tab="locked">Locked-down mode</button>
+    <button role="tab" aria-selected="false" data-tab="story">How it works</button>
+  </nav>
+
+  <!-- ================= CONVERT ================= -->
+  <section id="tab-convert">
+    <section class="card">
+      <h2><span class="step">1</span>Load test exports</h2>
+      <div id="drop" class="drop">Drop Jira CSV exports or a Bridgeport <code>.json</code> here, or click to choose<br><span class="muted" style="font-size:13px">Several files at once is fine. They're merged and de-duplicated.</span></div>
+      <input id="file" type="file" accept=".csv,.json,.txt" multiple class="hidden">
+      <div id="fileList" class="files"></div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" id="loadDemo">Load demo: 1,240 tests in two capped exports</button>
+        <button class="btn ghost hidden" id="clearAll">Clear</button>
+      </div>
+      <p class="muted" style="margin:10px 0 0;font-size:13px">The demo copies a real-world problem: Jira's CSV export stops at 1,000 rows, so a team with 1,240 tests ends up with two overlapping exports and multi-line descriptions that break spreadsheets. All demo data is made up.</p>
+    </section>
+
+    <section class="card hidden" id="mapCard">
+      <h2><span class="step">2</span>Map columns</h2>
+      <p class="muted" style="margin-top:0">Auto-detected from the export headers. Change any that are wrong.</p>
+      <div class="grid" id="mapping"></div>
+      <div class="grid" style="margin-top:12px">
+        <label class="f">Line breaks in descriptions become
+          <select id="sep"><option value=" | " selected>" | " (keeps steps readable)</option><option value=" ">a space</option><option value=" / ">" / "</option></select>
+        </label>
+        <label class="f">Jira wiki formatting (*bold*, {code}, h1.)
+          <select id="clean"><option value="1" selected>Clean it up</option><option value="0">Keep as-is</option></select>
+        </label>
+        <label class="f">Date format
+          <select id="datefmt"><option value="iso" selected>2026-11-12</option><option value="raw">As exported</option></select>
+        </label>
+      </div>
+    </section>
+
+    <section class="card hidden" id="resultCard">
+      <h2><span class="step">3</span>Validate, preview, export</h2>
+      <div class="stats" id="stats"></div>
+      <div id="issues"></div>
+      <div class="row" style="margin:12px 0"><input type="text" id="filter" placeholder="Search key, title, description" style="max-width:340px"><span class="muted" id="previewNote"></span></div>
+      <div class="tablewrap"><table id="preview"></table></div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn" id="dlXlsx">Download Excel (.xlsx)</button>
+        <button class="btn ghost" id="dlCsv">Download CSV</button>
+      </div>
+    </section>
+  </section>
+
+  <!-- ================= LOCKED-DOWN ================= -->
+  <section id="tab-locked" class="hidden">
+    <section class="card">
+      <h2>For VDIs and locked-down machines</h2>
+      <p>When you can't install tools, can't connect outside services, and the list view hides the field you need, Bridgeport generates a <b>console script</b> instead. Paste it into the browser's DevTools on the Jira page. It uses your existing login, reads every matching test through Jira's own API (100 per page, no 1,000-row cap), and copies a clean table to your clipboard, ready to paste into Excel.</p>
+      <ul class="muted" style="margin:6px 0 0;padding-left:20px">
+        <li>Read-only: it never changes anything in Jira.</li>
+        <li>Nothing leaves the machine: no outside servers, no extensions, no installs.</li>
+        <li>Works with Jira Cloud and Jira Server/Data Center.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2><span class="step">1</span>Choose what to pull</h2>
+      <div class="cols">
+        <div>
+          <h3 style="margin-top:0">Columns</h3>
+          <div id="colPicker"></div>
+          <div class="row" style="margin-top:8px"><input type="text" id="customName" placeholder="Add a custom field by name, e.g. Component Owner" style="max-width:300px"><button class="btn ghost" id="addCustom">Add</button></div>
+        </div>
+        <div>
+          <h3 style="margin-top:0">Defaults</h3>
+          <label class="f">Default search (JQL). You can change it when the script asks.
+            <input type="text" id="jql" value="project = DEMO AND issuetype = Test ORDER BY key ASC">
+          </label>
+          <label class="f" style="margin-top:10px">Line breaks in text become
+            <select id="lsep"><option value=" | " selected>" | "</option><option value=" ">a space</option></select>
+          </label>
+          <label class="chk" style="margin-top:10px"><input type="checkbox" id="lcsv" checked> Also download a CSV (if the machine allows downloads)</label>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2><span class="step">2</span>Copy the script</h2>
+      <div class="row" style="margin-bottom:10px"><button class="btn" id="copyScript">Copy script</button><button class="btn ghost" id="dlScript">Download .js</button><span class="muted" id="scriptMsg"></span></div>
+      <textarea class="code" id="scriptOut" readonly spellcheck="false"></textarea>
+    </section>
+
+    <section class="card">
+      <h2><span class="step">3</span>Run it on the Jira page</h2>
+      <ol class="how">
+        <li>Open Jira (any page) where you're logged in. Press <b>F12</b> and open the <b>Console</b> tab.</li>
+        <li>If Jira shows an app in a frame (like Xray), set the Console's context dropdown (top-left) to <b>top</b>. The script checks this and tells you if it's wrong.</li>
+        <li>Paste the script and press Enter. (Chrome may ask you to type <code>allow pasting</code> first.)</li>
+        <li>Enter which tests to pull and watch the progress count.</li>
+        <li>Click cell <b>A1</b> in Excel and press <b>Ctrl+V</b>. One test per row.</li>
+      </ol>
+    </section>
+  </section>
+
+  <!-- ================= STORY ================= -->
+  <section id="tab-story" class="hidden story">
+    <section class="card">
+      <h2>The problem</h2>
+      <p>A QA team needed every test case in their Jira/Xray repository in one spreadsheet, with the full description, to review and plan coverage. It sounds like a simple export. It wasn't:</p>
+      <ul>
+        <li><b>The list view hides descriptions.</b> You have to click into each test, one at a time, across thousands of tests.</li>
+        <li><b>Exports stop at about 1,000 rows,</b> so large repositories come out in overlapping chunks.</li>
+        <li><b>Multi-line descriptions break spreadsheets.</b> One test spills across several rows.</li>
+        <li><b>The team works inside a locked-down VDI.</b> No installs, no outside tools, strict security.</li>
+      </ul>
+    </section>
+    <section class="card">
+      <h2>The approach: meet the environment where it is</h2>
+      <p>Instead of one tool that assumes open access, Bridgeport has two paths that share the same cleanup and validation rules:</p>
+      <svg class="diagram" viewBox="0 0 920 270" role="img" aria-label="Diagram: Jira data reaches a spreadsheet either through file exports into the Bridgeport web app, or through a generated console script inside a locked-down VDI.">
+        <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor" style="color:var(--muted)"/></marker></defs>
+        <rect class="box" x="10" y="95" width="150" height="70" rx="10"/><text x="85" y="125" text-anchor="middle" font-weight="600">Jira / Xray</text><text x="85" y="145" text-anchor="middle" class="lbl">thousands of tests</text>
+        <rect class="box" x="250" y="20" width="230" height="80" rx="10"/><text x="365" y="52" text-anchor="middle" font-weight="600">Open environment</text><text x="365" y="73" text-anchor="middle" class="lbl">CSV exports (≤1,000 each)</text>
+        <rect class="box hl" x="250" y="170" width="230" height="80" rx="10"/><text x="365" y="202" text-anchor="middle" font-weight="600">Locked-down VDI</text><text x="365" y="223" text-anchor="middle" class="lbl">generated console script, read-only API</text>
+        <rect class="box" x="560" y="95" width="180" height="70" rx="10"/><text x="650" y="122" text-anchor="middle" font-weight="600">Shared rules</text><text x="650" y="142" text-anchor="middle" class="lbl">map, flatten, de-dupe, validate</text>
+        <rect class="box" x="790" y="95" width="120" height="70" rx="10"/><text x="850" y="125" text-anchor="middle" font-weight="600">Excel</text><text x="850" y="145" text-anchor="middle" class="lbl">1 test = 1 row</text>
+        <path class="arrow" d="M160,115 C200,90 215,65 248,62"/><path class="arrow" d="M160,145 C200,175 215,205 248,208"/>
+        <path class="arrow" d="M480,60 C520,70 530,105 558,118"/><path class="arrow" d="M480,210 C520,200 530,160 558,145"/>
+        <path class="arrow" d="M740,130 L788,130"/>
+      </svg>
+      <h3>Design decisions</h3>
+      <ul>
+        <li><b>Use the API, not the screen.</b> Scraping the list view can't see descriptions and breaks when the UI changes. Jira's search API returns every field, 100 tests per page, with no 1,000-row cap.</li>
+        <li><b>Zero-install by design.</b> The VDI path is a single script that runs with the user's existing session, so there's no new credential, no new network path, and nothing to get approved.</li>
+        <li><b>Read-only and gentle.</b> It only makes GET requests, with a short pause between pages.</li>
+        <li><b>Validate before you export.</b> Missing descriptions, duplicate keys, empty fields, and text over Excel's cell limit are flagged, not silently dropped.</li>
+        <li><b>Spreadsheet-safe output.</b> One line per test, real <code>.xlsx</code> output, and protection against cells being read as formulas.</li>
+      </ul>
+    </section>
+    <section class="card">
+      <h2>Roadmap</h2>
+      <ul>
+        <li><span class="pill">next</span> Connected mode: sign in to Jira Cloud and pull directly, no export step.</li>
+        <li><span class="pill">next</span> Migrate to Linear: field mapping preview, dry run, and one-click rollback of everything created.</li>
+        <li><span class="pill">later</span> Test steps from Xray (step-level rows) and Google Sheets export.</li>
+      </ul>
+    </section>
+  </section>
+
+  <footer>Bridgeport is an independent project by <a href="https://beverlyduran.com">Beverly Duran</a>. Demo data is fictional. Not affiliated with Atlassian, Xray, or Linear.</footer>
+</main>
+
+<script id="core">
+// ======================= Converter core (shared, tested) =======================
+function parseCSV(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const rows = []; let row = [], field = '', i = 0, q = false; const n = text.length;
+  while (i < n) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { field += '"'; i += 2; continue; } q = false; i++; continue; } field += c; i++; continue; }
+    if (c === '"') { q = true; i++; continue; }
+    if (c === ',') { row.push(field); field = ''; i++; continue; }
+    if (c === '\r') { i++; continue; }
+    if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; i++; continue; }
+    field += c; i++;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(v => v.trim() !== ''));
+}
+
+const FIELDS = [
+  { id: 'key', label: 'Test Key', guess: [/^issue key$/i, /^key$/i, /test key/i] },
+  { id: 'title', label: 'Test Title', guess: [/^summary$/i, /^title$/i, /test title/i] },
+  { id: 'description', label: 'Description', guess: [/^description$/i, /test description/i] },
+  { id: 'criticality', label: 'Criticality', guess: [/^custom field \(criticality\)$/i, /^criticality$/i, /criticality/i] },
+  { id: 'created', label: 'Date Added', guess: [/^created$/i, /date added/i, /created date/i] },
+];
+
+function guessMapping(headers) {
+  const m = {};
+  for (const f of FIELDS) { m[f.id] = -1; for (const re of f.guess) { const idx = headers.findIndex(h => re.test(h.trim())); if (idx >= 0) { m[f.id] = idx; break; } } }
+  return m;
+}
+
+function sourceFromText(name, text) {
+  const t = text.trim();
+  if (t.startsWith('{') || t.startsWith('[')) {
+    const j = JSON.parse(t); const issues = Array.isArray(j) ? j : (j.issues || []);
+    const headers = ['key', 'summary', 'description', 'criticality', 'created'];
+    return { name, kind: 'json', headers, rows: issues.map(x => headers.map(h => x[h] == null ? '' : String(x[h]))), mapping: { key: 0, title: 1, description: 2, criticality: 3, created: 4 } };
+  }
+  const all = parseCSV(text); if (!all.length) throw new Error('File is empty');
+  return { name, kind: 'csv', headers: all[0], rows: all.slice(1), mapping: guessMapping(all[0]) };
+}
+
+function cleanJira(s) {
+  return s
+    .replace(/\{(code|noformat|quote|panel)(:[^}]*)?\}/gi, '').replace(/\{color(:[^}]*)?\}/gi, '')
+    .replace(/^h[1-6]\.\s*/gim, '').replace(/\[([^|\]]+)\|([^\]]+)\]/g, '$1 ($2)')
+    .replace(/(^|\s)\*([^*\n]+)\*(?=\s|$|[.,;:!?])/g, '$1$2').replace(/(^|\s)_([^_\n]+)_(?=\s|$|[.,;:!?])/g, '$1$2')
+    .replace(/\{\{([^}]+)\}\}/g, '$1').replace(/^\s*[#*-]+\s+/gm, '• ').replace(/!([^!\s|]+)(\|[^!]*)?!/g, '[image: $1]');
+}
+function oneLine(s, sep) { return s.replace(/\r\n?/g, '\n').split('\n').map(x => x.replace(/[\t ]+/g, ' ').trim()).filter(Boolean).join(sep).trim(); }
+
+const MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+function isoDate(s) {
+  if (!s) return '';
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})\/([A-Za-z]{3})\/(\d{2,4})/);
+  if (m && MON[m[2].toLowerCase()]) { let y = +m[3]; if (y < 100) y += 2000; return `${y}-${String(MON[m[2].toLowerCase()]).padStart(2, '0')}-${m[1].padStart(2, '0')}`; }
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+  return s;
+}
+
+const EXCEL_MAX = 32767;
+function keySort(a, b) { const pa = a.match(/^(.*?)-(\d+)$/), pb = b.match(/^(.*?)-(\d+)$/); if (pa && pb && pa[1] === pb[1]) return (+pa[2]) - (+pb[2]); return a < b ? -1 : a > b ? 1 : 0; }
+function buildTable(sources, opts) {
+  const byKey = new Map(); const problems = { noKey: 0, noDesc: [], noCrit: 0, tooLong: [], dupes: 0 }; let read = 0;
+  for (const src of sources) {
+    const m = src.mapping; const pick = (row, id) => m[id] >= 0 ? (row[m[id]] || '') : '';
+    for (const row of src.rows) {
+      read++;
+      const key = pick(row, 'key').trim(); if (!key) { problems.noKey++; continue; }
+      let desc = pick(row, 'description'); if (opts.clean) desc = cleanJira(desc); desc = oneLine(desc, opts.sep);
+      const rec = { key, title: oneLine(pick(row, 'title'), ' '), description: desc, criticality: oneLine(pick(row, 'criticality'), ' '), created: opts.datefmt === 'iso' ? isoDate(pick(row, 'created').trim()) : pick(row, 'created').trim() };
+      if (byKey.has(key)) { problems.dupes++; if (rec.description.length >= byKey.get(key).description.length) byKey.set(key, rec); }
+      else byKey.set(key, rec);
+    }
+  }
+  const rows = [...byKey.values()].sort((a, b) => keySort(a.key, b.key));
+  for (const r of rows) {
+    if (!r.description) problems.noDesc.push(r.key);
+    if (!r.criticality) problems.noCrit++;
+    if (r.description.length > EXCEL_MAX) { problems.tooLong.push(r.key); r.description = r.description.slice(0, EXCEL_MAX - 20) + ' [cut: too long]'; }
+  }
+  return { rows, read, problems };
+}
+
+const HEAD = ['Test Key', 'Test Title', 'Description', 'Criticality', 'Date Added'];
+const COLS = ['key', 'title', 'description', 'criticality', 'created'];
+function toCSV(rows) {
+  const esc = v => { let s = String(v ?? ''); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  return '﻿' + [HEAD.map(esc).join(',')].concat(rows.map(r => COLS.map(c => esc(r[c])).join(','))).join('\r\n');
+}
+
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function zipStore(files) {
+  const enc = new TextEncoder(); const parts = [], central = []; let off = 0;
+  const u16 = v => [v & 255, (v >>> 8) & 255], u32 = v => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
+  for (const f of files) {
+    const nm = enc.encode(f.name), crc = crc32(f.data), sz = f.data.length;
+    const local = new Uint8Array([...u32(0x04034b50), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(sz), ...u32(sz), ...u16(nm.length), ...u16(0)]);
+    parts.push(local, nm, f.data);
+    central.push(new Uint8Array([...u32(0x02014b50), ...u16(20), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(sz), ...u32(sz), ...u16(nm.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(off)]), nm);
+    off += local.length + nm.length + sz;
+  }
+  const cdSize = central.reduce((a, b) => a + b.length, 0);
+  const end = new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(cdSize), ...u32(off), ...u16(0)]);
+  const all = parts.concat(central, [end]); const out = new Uint8Array(all.reduce((a, b) => a + b.length, 0)); let p = 0; for (const a of all) { out.set(a, p); p += a.length; } return out;
+}
+function xmlEsc(s) { return String(s ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function colName(i) { let s = ''; i++; while (i) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+function toXLSX(rows) {
+  const enc = new TextEncoder(); const last = colName(HEAD.length - 1);
+  const cell = (r, c, v, s) => `<c r="${colName(c)}${r}" t="inlineStr"${s ? ` s="${s}"` : ''}><is><t xml:space="preserve">${xmlEsc(v)}</t></is></c>`;
+  const lines = [`<row r="1">${HEAD.map((h, c) => cell(1, c, h, 1)).join('')}</row>`];
+  rows.forEach((r, i) => lines.push(`<row r="${i + 2}">${COLS.map((k, c) => cell(i + 2, c, r[k])).join('')}</row>`));
+  const widths = [14, 50, 100, 14, 14];
+  const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols><sheetData>${lines.join('')}</sheetData><autoFilter ref="A1:${last}${rows.length + 1}"/></worksheet>`;
+  const X = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const files = {
+    '[Content_Types].xml': X + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>',
+    '_rels/.rels': X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+    'xl/workbook.xml': X + `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Tests" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">Tests!$A$1:$${last}$${rows.length + 1}</definedName></definedNames></workbook>`,
+    'xl/_rels/workbook.xml.rels': X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
+    'xl/styles.xml': X + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs></styleSheet>',
+    'xl/worksheets/sheet1.xml': sheet,
+  };
+  return zipStore(Object.entries(files).map(([name, s]) => ({ name, data: enc.encode(s) })));
+}
+
+// ======================= Demo data (fictional, deterministic) =======================
+function demoExports(total = 1240, cap = 1000, overlap = 100) {
+  let seed = 7; const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648; const pick = a => a[Math.floor(rnd() * a.length)];
+  const areas = { Login: ['valid credentials', 'wrong password', 'locked account', 'SSO redirect', 'remember me'], Checkout: ['saved card', 'expired coupon', 'guest checkout', 'tax by region', 'split payment'], Search: ['special characters', 'empty results', 'filters persist', 'typo tolerance'], Reports: ['PDF export', 'date range', 'large dataset', 'scheduled email'], Settings: ['change email', 'two-factor setup', 'timezone', 'delete account'], Notifications: ['email digest', 'push opt-out', 'mention alert'] };
+  const crit = ['P0', 'P1', 'P1', 'P2', 'P2', 'P2', 'P3', 'P3'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'];
+  const tests = [];
+  for (let i = 1; i <= total; i++) {
+    const area = pick(Object.keys(areas)), what = pick(areas[area]);
+    const steps = 2 + Math.floor(rnd() * 3);
+    let desc = (rnd() < .4 ? `*Preconditions:* test user exists in ${area.toLowerCase()} env\n` : '') + Array.from({ length: steps }, (_, s) => `# ${['Open', 'Go to', 'Select', 'Enter', 'Click'][s % 5]} the ${area.toLowerCase()} ${['page', 'form', 'option', 'details', '{{Continue}} button'][s % 5]}`).join('\n') + `\nExpected: ${what} works and no errors are shown`;
+    if (rnd() < .02) desc = '';
+    tests.push([`DEMO-${i}`, `${area}: ${what}${i % 7 === 0 ? ', edge case "' + (i % 3) + '"' : ''}`, 'Test', desc, rnd() < .03 ? '' : pick(crit), `${String(1 + Math.floor(rnd() * 28)).padStart(2, '0')}/${pick(months)}/26 ${1 + Math.floor(rnd() * 12)}:${String(Math.floor(rnd() * 60)).padStart(2, '0')} ${rnd() < .5 ? 'AM' : 'PM'}`]);
+  }
+  const head = ['Issue key', 'Summary', 'Issue Type', 'Description', 'Custom field (Criticality)', 'Created'];
+  const esc = v => /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  const csv = rows => [head.join(',')].concat(rows.map(r => r.map(esc).join(','))).join('\n');
+  return [{ name: `demo-export-1 (DEMO-1 to DEMO-${cap}).csv`, text: csv(tests.slice(0, cap)) }, { name: `demo-export-2 (DEMO-${cap - overlap + 1} to DEMO-${total}).csv`, text: csv(tests.slice(cap - overlap)) }];
+}
+
+// ======================= Console script generator =======================
+const SCRIPT_SOURCES = [
+  { source: 'key', label: 'Test Key', on: true },
+  { source: 'summary', label: 'Test Title', on: true },
+  { source: 'description', label: 'Description', on: true },
+  { source: 'custom:Criticality', label: 'Criticality', on: true },
+  { source: 'created', label: 'Date Added', on: true },
+  { source: 'status', label: 'Status', on: false },
+  { source: 'priority', label: 'Priority', on: false },
+  { source: 'labels', label: 'Labels', on: false },
+  { source: 'components', label: 'Components', on: false },
+  { source: 'assignee', label: 'Assignee', on: false },
+  { source: 'updated', label: 'Last Updated', on: false },
+];
+function buildConsoleScript(cfg) {
+  const C = JSON.stringify({ jql: cfg.jql, sep: cfg.sep, csv: !!cfg.csv, columns: cfg.columns.map(c => ({ label: c.label, source: c.source })) });
+  return [
+    '// Bridgeport console script. Generated ' + (cfg.date || new Date().toISOString().slice(0, 10)) + '.',
+    '// Paste into the DevTools Console on a Jira page (context: "top"). Read-only: it never changes anything in Jira.',
+    '(async () => {',
+    '  const CFG = ' + C + ';',
+    "  if (/getxray|xray\\.cloud|xpand/i.test(location.hostname)) { console.error('Bridgeport: this console is pointed at the Xray frame. At the top-left of the Console, switch the context dropdown to \"top\", then paste again.'); return; }",
+    "  const JQL = prompt('Bridgeport: which tests? (JQL)', CFG.jql); if (!JQL) return;",
+    "  const base = location.origin + ((window.AJS && AJS.contextPath && AJS.contextPath()) || '');",
+    '  const enc = encodeURIComponent, sleep = ms => new Promise(r => setTimeout(r, ms));',
+    "  const get = async u => { const r = await fetch(base + u, { credentials: 'same-origin', headers: { Accept: 'application/json' } }); if (!r.ok) { let m = ''; try { m = ((await r.json()).errorMessages || []).join(' '); } catch (e) {} const x = new Error('Jira said ' + r.status + ' ' + m); x.status = r.status; throw x; } return r.json(); };",
+    "  const toText = n => { if (!n) return ''; if (typeof n === 'string') return n; if (n.type === 'text') return n.text || ''; if (n.type === 'hardBreak') return '\\n'; const s = (n.content || []).map(toText).join(''); return /^(paragraph|heading|listItem|codeBlock|blockquote|tableRow)$/.test(n.type) ? s + '\\n' : s; };",
+    "  const val = v => v == null ? '' : Array.isArray(v) ? v.map(val).join(', ') : typeof v === 'object' ? (v.type === 'doc' ? toText(v) : (v.value || v.name || v.displayName || '')) : String(v);",
+    "  const clean = s => s.replace(/\\{(code|noformat|quote|panel|color)(:[^}]*)?\\}/gi, '').replace(/^h[1-6]\\.\\s*/gim, '').replace(/\\{\\{([^}]+)\\}\\}/g, '$1').replace(/\\[([^|\\]]+)\\|([^\\]]+)\\]/g, '$1 ($2)').replace(/(^|\\s)\\*([^*\\n]+)\\*/g, '$1$2').replace(/^\\s*[#*-]+\\s+/gm, '• ');",
+    "  const oneLine = s => clean(s || '').replace(/\\r\\n?/g, '\\n').split('\\n').map(x => x.replace(/[\\t ]+/g, ' ').trim()).filter(Boolean).join(CFG.sep);",
+    '  let fieldList = []; try { fieldList = await get(\'/rest/api/2/field\'); } catch (e) {}',
+    '  const find = name => fieldList.find(f => f.name.trim().toLowerCase() === name.toLowerCase()) || fieldList.find(f => f.name.toLowerCase().includes(name.toLowerCase())) || null;',
+    "  const cols = CFG.columns.map(c => { if (!c.source.startsWith('custom:')) return Object.assign({}, c, { id: c.source }); const f = find(c.source.slice(7)); if (f) console.log('Bridgeport: \"' + c.label + '\" is field \"' + f.name + '\" (' + f.id + ')'); else console.warn('Bridgeport: no field named \"' + c.source.slice(7) + '\", so \"' + c.label + '\" will be empty.'); return Object.assign({}, c, { id: f ? f.id : null }); });",
+    "  const fields = Array.from(new Set(cols.filter(c => c.id && c.id !== 'key').map(c => c.id))).join(',') || 'summary';",
+    "  const cell = (i, c) => { if (c.id === 'key') return i.key; if (!c.id) return ''; const v = i.fields[c.id]; if (c.id === 'created' || c.id === 'updated') return (v || '').slice(0, 10); return oneLine(val(v)); };",
+    '  const rows = []; const add = i => rows.push(cols.map(c => cell(i, c)));',
+    "  console.log('%cBridgeport: reading tests…', 'font-weight:bold');",
+    '  try {',
+    '    let start = 0, total = Infinity;',
+    "    while (start < total) { const d = await get('/rest/api/2/search?jql=' + enc(JQL) + '&startAt=' + start + '&maxResults=100&fields=' + fields); total = d.total; d.issues.forEach(add); start += d.issues.length; console.log('  ' + rows.length + ' / ' + total); if (!d.issues.length) break; await sleep(150); }",
+    '  } catch (e) {',
+    "    if (e.status !== 404 && e.status !== 410) { console.error('Bridgeport stopped: ' + e.message); return; }",
+    "    rows.length = 0; let tok = '';",
+    "    do { const d = await get('/rest/api/3/search/jql?jql=' + enc(JQL) + '&maxResults=100&fields=' + fields + (tok ? '&nextPageToken=' + enc(tok) : '')); d.issues.forEach(add); tok = d.nextPageToken || ''; console.log('  ' + rows.length + '…'); await sleep(150); } while (tok);",
+    '  }',
+    '  const seen = new Set(), out = rows.filter(r => !seen.has(r[0]) && seen.add(r[0]));',
+    '  const head = cols.map(c => c.label);',
+    "  const q = (v, sep) => { let s = String(v).replace(/\\t/g, ' '); if (/^[=+\\-@]/.test(s)) s = \"'\" + s; return /[\"\\n\\r]/.test(s) || s.includes(sep) ? '\"' + s.replace(/\"/g, '\"\"') + '\"' : s; };",
+    "  const tsv = [head].concat(out).map(r => r.map(v => q(v, '\\t')).join('\\t')).join('\\r\\n');",
+    "  const csv = '\\uFEFF' + [head].concat(out).map(r => r.map(v => q(v, ',')).join(',')).join('\\r\\n');",
+    "  let copied = false; try { if (typeof copy === 'function') { copy(tsv); copied = true; } } catch (e) {} if (!copied) { try { await navigator.clipboard.writeText(tsv); copied = true; } catch (e) {} }",
+    "  if (CFG.csv) { try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = 'tests-' + new Date().toISOString().slice(0, 10) + '.csv'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) {} }",
+    '  window.bridgeport = { rows: out, tsv: tsv, csv: csv };',
+    "  console.log('%cBridgeport: done. ' + out.length + ' tests.', 'font-weight:bold;color:green');",
+    "  console.log(copied ? '→ Copied. In Excel, click cell A1 and press Ctrl+V.' : '→ Clipboard was blocked. Type  copy(bridgeport.tsv)  and press Enter, then paste into Excel.');",
+    "  cols.forEach((c, j) => { if (!c.id) return; const empty = out.filter(r => !r[j]).length; if (empty) console.warn(empty + ' test(s) have no ' + c.label + '.'); });",
+    '  console.table(out.slice(0, 10).map(r => Object.fromEntries(head.map((h, j) => [h, String(r[j]).slice(0, 80)]))));',
+    '})();',
+  ].join('\n');
+}
+
+if (typeof module !== 'undefined') module.exports = { parseCSV, guessMapping, sourceFromText, cleanJira, oneLine, isoDate, buildTable, toCSV, toXLSX, demoExports, buildConsoleScript, SCRIPT_SOURCES };
+</script>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // ---------- Tabs ----------
+  const tabs = document.querySelectorAll('nav.tabs button');
+  function show(name) {
+    tabs.forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+    ['convert', 'locked', 'story'].forEach(t => $('tab-' + t).classList.toggle('hidden', t !== name));
+    try { history.replaceState(null, '', '#' + name); } catch (e) {}
+  }
+  tabs.forEach(b => b.addEventListener('click', () => show(b.dataset.tab)));
+  if (['#locked', '#story'].includes(location.hash)) show(location.hash.slice(1));
+
+  // ---------- Convert ----------
+  let sources = [], built = null;
+  const drop = $('drop');
+  drop.addEventListener('click', () => $('file').click());
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); addFiles(e.dataTransfer.files); });
+  $('file').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
+  $('loadDemo').addEventListener('click', () => { sources = []; demoExports().forEach(d => addSource(d.name, d.text, true)); refresh(); });
+  $('clearAll').addEventListener('click', () => { sources = []; refresh(); });
+
+  async function addFiles(list) { for (const f of list) addSource(f.name, await f.text(), true); refresh(); }
+  function addSource(name, text) { try { sources.push(sourceFromText(name, text)); } catch (e) { alert(`Couldn't read ${name}: ${e.message}`); } }
+
+  function refresh() {
+    $('fileList').innerHTML = sources.map(s => `<div>✓ <b>${esc(s.name)}</b>: ${s.rows.length.toLocaleString()} rows</div>`).join('');
+    const has = sources.length > 0;
+    $('clearAll').classList.toggle('hidden', !has); $('mapCard').classList.toggle('hidden', !has); $('resultCard').classList.toggle('hidden', !has);
+    renderMapping(); rebuild();
+  }
+
+  function renderMapping() {
+    const csvs = sources.filter(s => s.kind === 'csv');
+    if (!csvs.length) { $('mapping').innerHTML = '<p class="muted">Bridgeport .json files are already mapped.</p>'; return; }
+    const ref = csvs[0];
+    $('mapping').innerHTML = FIELDS.map(f => `<label class="f">${f.label}<select data-f="${f.id}"><option value="-1">(none)</option>${ref.headers.map((h, i) => `<option value="${i}" ${ref.mapping[f.id] === i ? 'selected' : ''}>${esc(h)}</option>`).join('')}</select></label>`).join('');
+    $('mapping').querySelectorAll('select').forEach(sel => sel.addEventListener('change', () => {
+      const name = ref.headers[+sel.value];
+      for (const s of csvs) s.mapping[sel.dataset.f] = +sel.value < 0 ? -1 : s.headers.indexOf(name);
+      rebuild();
+    }));
+  }
+
+  ['sep', 'clean', 'datefmt'].forEach(id => $(id).addEventListener('change', rebuild));
+  $('filter').addEventListener('input', renderPreview);
+
+  function rebuild() {
+    if (!sources.length) { built = null; return; }
+    built = buildTable(sources, { sep: $('sep').value, clean: $('clean').value === '1', datefmt: $('datefmt').value });
+    const p = built.problems;
+    $('stats').innerHTML = [[built.read, 'rows read'], [built.rows.length, 'unique tests'], [p.dupes, 'duplicates merged'], [p.noDesc.length, 'missing description'], [p.noCrit, 'missing criticality']]
+      .map(([b, s]) => `<div class="stat"><b>${b.toLocaleString()}</b><span>${s}</span></div>`).join('');
+    const msgs = [];
+    for (const f of FIELDS) if (sources.some(s => s.kind === 'csv' && s.mapping[f.id] < 0)) msgs.push(['err', `No column picked for <b>${f.label}</b>, so it will be empty.`]);
+    if (p.noKey) msgs.push(['warn', `${p.noKey} row(s) had no test key and were skipped.`]);
+    if (p.noDesc.length) msgs.push(['warn', `${p.noDesc.length} test(s) have no description: ${esc(p.noDesc.slice(0, 10).join(', '))}${p.noDesc.length > 10 ? ', …' : ''}`]);
+    if (p.noCrit) msgs.push(['warn', `${p.noCrit} test(s) have no criticality set.`]);
+    if (p.tooLong.length) msgs.push(['warn', `${p.tooLong.length} description(s) exceeded Excel's cell limit and were cut: ${esc(p.tooLong.slice(0, 8).join(', '))}`]);
+    if (p.dupes) msgs.push(['ok', `${p.dupes.toLocaleString()} overlapping row(s) across exports were merged, keeping the most complete copy of each test.`]);
+    if (sources.length > 1) msgs.push(['ok', `${sources.length} exports combined into one sheet. Every test appears exactly once, with its description on a single line.`]);
+    $('issues').innerHTML = msgs.map(([k, m]) => `<div class="msg ${k}">${m}</div>`).join('');
+    renderPreview();
+  }
+
+  function renderPreview() {
+    if (!built) return;
+    const q = $('filter').value.trim().toLowerCase();
+    const rows = q ? built.rows.filter(r => (r.key + ' ' + r.title + ' ' + r.description).toLowerCase().includes(q)) : built.rows;
+    const shown = rows.slice(0, 200);
+    $('previewNote').textContent = `Showing ${shown.length.toLocaleString()} of ${rows.length.toLocaleString()}`;
+    $('preview').innerHTML = `<thead><tr>${HEAD.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${shown.map(r => `<tr><td class="mono">${esc(r.key)}</td><td>${esc(r.title)}</td><td class="desc" title="${esc(r.description)}">${esc(r.description) || '<span class="muted">(empty)</span>'}</td><td>${esc(r.criticality) || '<span class="muted">-</span>'}</td><td class="mono">${esc(r.created)}</td></tr>`).join('')}</tbody>`;
+  }
+
+  const download = (name, data, type) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); };
+  const stamp = () => new Date().toISOString().slice(0, 10);
+  $('dlXlsx').addEventListener('click', () => built && download(`tests-${stamp()}.xlsx`, toXLSX(built.rows), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'));
+  $('dlCsv').addEventListener('click', () => built && download(`tests-${stamp()}.csv`, toCSV(built.rows), 'text/csv;charset=utf-8'));
+
+  // ---------- Locked-down mode ----------
+  const cols = SCRIPT_SOURCES.map(c => Object.assign({}, c));
+  function renderCols() {
+    $('colPicker').innerHTML = cols.map((c, i) => `<label class="chk"><input type="checkbox" data-i="${i}" ${c.on ? 'checked' : ''}> ${esc(c.label)} <span class="muted mono" style="font-size:12px">${esc(c.source.replace('custom:', 'field: '))}</span></label>`).join('');
+    $('colPicker').querySelectorAll('input').forEach(cb => cb.addEventListener('change', () => { cols[+cb.dataset.i].on = cb.checked; renderScript(); }));
+  }
+  $('addCustom').addEventListener('click', () => { const n = $('customName').value.trim(); if (!n) return; cols.push({ source: 'custom:' + n, label: n, on: true }); $('customName').value = ''; renderCols(); renderScript(); });
+  ['jql', 'lsep', 'lcsv'].forEach(id => $(id).addEventListener('input', renderScript));
+  function currentScript() { return buildConsoleScript({ jql: $('jql').value, sep: $('lsep').value, csv: $('lcsv').checked, columns: cols.filter(c => c.on) }); }
+  function renderScript() { $('scriptOut').value = currentScript(); }
+  $('copyScript').addEventListener('click', async () => {
+    const s = currentScript();
+    try { await navigator.clipboard.writeText(s); } catch (e) { $('scriptOut').select(); document.execCommand('copy'); }
+    $('scriptMsg').textContent = 'Copied.'; setTimeout(() => $('scriptMsg').textContent = '', 2500);
+  });
+  $('dlScript').addEventListener('click', () => download('bridgeport-console.js', currentScript(), 'text/javascript'));
+  renderCols(); renderScript();
+})();
+</script>
+</body>
+</html>
